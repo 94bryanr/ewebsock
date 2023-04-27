@@ -1,4 +1,6 @@
 use crate::{EventHandler, Result, WsEvent, WsMessage};
+use tracing::debug;
+use tungstenite::{client::IntoClientRequest, http::header::COOKIE};
 
 /// This is how you send messages to the server.
 ///
@@ -14,11 +16,13 @@ impl WsSender {
     }
 }
 
-async fn ws_connect_async(
-    url: String,
+async fn ws_connect_async<R>(
+    url: R,
     outgoing_messages_stream: impl futures::Stream<Item = WsMessage>,
     on_event: EventHandler,
-) {
+) where
+    R: IntoClientRequest + Unpin,
+{
     use futures::StreamExt as _;
 
     let (ws_stream, _) = match tokio_tungstenite::connect_async(url).await {
@@ -81,12 +85,33 @@ async fn ws_connect_async(
 /// # Errors
 /// * On native: never.
 /// * On web: failure to use `WebSocket` API.
-pub fn ws_connect(url: String, on_event: EventHandler) -> Result<WsSender> {
-    Ok(ws_connect_native(url, on_event))
+pub fn ws_connect<R>(
+    url: R,
+    on_event: EventHandler,
+    session_cookie: Option<String>,
+) -> Result<WsSender>
+where
+    R: IntoClientRequest + Clone + Send + Sync + Unpin + 'static,
+{
+    let mut request = url.into_client_request().unwrap();
+    match session_cookie {
+        Some(cookie) => {
+            request
+                .headers_mut()
+                .append(COOKIE, cookie.parse().unwrap());
+        }
+        None => {}
+    };
+    debug!("calling ws_connect on native");
+
+    Ok(ws_connect_native(request, on_event))
 }
 
 /// Call the given event handler on each new received event.
-pub fn ws_connect_native(url: String, on_event: EventHandler) -> WsSender {
+pub fn ws_connect_native<R>(url: R, on_event: EventHandler) -> WsSender
+where
+    R: IntoClientRequest + Send + Sync + Unpin + 'static,
+{
     let (tx, mut rx) = tokio::sync::mpsc::channel(1000);
 
     let outgoing_messages_stream = async_stream::stream! {
@@ -97,7 +122,7 @@ pub fn ws_connect_native(url: String, on_event: EventHandler) -> WsSender {
     };
 
     tokio::spawn(async move {
-        ws_connect_async(url.clone(), outgoing_messages_stream, on_event).await;
+        ws_connect_async(url, outgoing_messages_stream, on_event).await;
         tracing::debug!("WS connection finished.");
     });
     WsSender { tx }

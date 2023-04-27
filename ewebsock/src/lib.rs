@@ -107,7 +107,10 @@ pub type EventHandler = Box<dyn Send + Fn(WsEvent) -> std::ops::ControlFlow<()>>
 /// * On web: failure to use `WebSocket` API.
 pub fn connect(url: impl Into<String>) -> Result<(WsSender, WsReceiver)> {
     let (ws_receiver, on_event) = WsReceiver::new();
+    #[cfg(target_arch = "wasm32")]
     let ws_sender = ws_connect(url.into(), on_event)?;
+    #[cfg(not(target_arch = "wasm32"))]
+    let ws_sender = ws_connect(url.into(), on_event, None)?;
     Ok((ws_sender, ws_receiver))
 }
 
@@ -123,6 +126,9 @@ pub fn connect_with_wakeup(
     wake_up: impl Fn() + Send + Sync + 'static,
 ) -> Result<(WsSender, WsReceiver)> {
     let (receiver, on_event) = WsReceiver::new_with_callback(wake_up);
+    #[cfg(target_arch = "wasm32")]
     let sender = ws_connect(url.into(), on_event)?;
+    #[cfg(not(target_arch = "wasm32"))]
+    let sender = ws_connect(url.into(), on_event, None)?;
     Ok((sender, receiver))
 }
