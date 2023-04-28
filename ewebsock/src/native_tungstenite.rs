@@ -102,7 +102,6 @@ where
         }
         None => {}
     };
-    debug!("calling ws_connect on native");
 
     Ok(ws_connect_native(request, on_event))
 }
