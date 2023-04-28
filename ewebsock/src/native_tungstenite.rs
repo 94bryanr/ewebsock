@@ -117,12 +117,10 @@ where
         while let Some(item) = rx.recv().await {
             yield item;
         }
-        tracing::debug!("WsSender dropped - closing connection.");
     };
 
     tokio::spawn(async move {
         ws_connect_async(url, outgoing_messages_stream, on_event).await;
-        tracing::debug!("WS connection finished.");
     });
     WsSender { tx }
 }
