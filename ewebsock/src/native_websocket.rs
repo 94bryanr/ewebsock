@@ -3,6 +3,7 @@ use crate::{EventHandler, Result, WsEvent, WsMessage};
 /// This is how you send messages to the server.
 ///
 /// When the last clone of this is dropped, the connection is closed.
+#[derive(Clone)]
 pub struct WsSender {
     sender: websocket::sender::Writer<websocket::sync::stream::TcpStream>,
 }
