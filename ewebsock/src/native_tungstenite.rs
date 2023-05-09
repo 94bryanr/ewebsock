@@ -5,7 +5,7 @@ use tungstenite::{client::IntoClientRequest, http::header::COOKIE};
 /// This is how you send messages to the server.
 ///
 /// When the last clone of this is dropped, the connection is closed.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct WsSender {
     tx: tokio::sync::mpsc::Sender<WsMessage>,
 }
