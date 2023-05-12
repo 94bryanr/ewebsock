@@ -13,7 +13,7 @@ fn string_from_js_string(s: js_sys::JsString) -> String {
 /// This is how you send messages to the server.
 ///
 /// When the last clone of this is dropped, the connection is closed.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct WsSender {
     ws: web_sys::WebSocket,
 }
